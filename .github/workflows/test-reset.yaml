@@ -25,6 +25,11 @@ jobs:
       - name: Remove commits by sre-croquis
         run: |
           git checkout main
-          git fetch origin
-          git rebase -i --onto $(git rev-list --reverse --all --author="leelee3264" | tail -n 1) HEAD~1
+          git filter-branch --commit-filter '
+            if [ "$GIT_AUTHOR_NAME" = "leelee3264" ];
+            then
+              skip_commit "$@";
+            else
+              git commit-tree "$@";
+            fi' HEAD
           git push -f origin main
