@@ -15,35 +15,16 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
+      - name: Checkout Repository
+        uses: actions/checkout@v2
 
-    - name: Configure Git
-      run: |
-        git config --global user.name "github-actions"
-        git config --global user.email "action@github.com"
-    
-    - name: Find and squash sre-croquis commits
-      run: |
-        # Identify commits by 'sre-croquis' and create a new branch for rebase
-        TARGET_USER="leelee3264"
+      - uses: oleksiyrudenko/gha-git-credentials@v2-latest
+        with:
+          token: '${{ secrets.SRE_ACCOUNT_TOKEN }}'
 
-        # Find all commit hashes by the user
-        commits=$(git log --pretty=format:"%h %an" | grep "$TARGET_USER" | awk '{print $1}')
-        
-        if [ -z "$commits" ]; then
-          echo "No commits by $TARGET_USER found."
-          exit 0
-        fi
-
-        # Start an interactive rebase starting from the first commit by sre-croquis
-        first_commit=$(echo "$commits" | tail -n 1)
-
-        # Rebase from the commit before the first sre-croquis commit
-        git rebase -i --root
-
-    - name: Push changes back to GitHub
-      run: |
-        git push origin main --force
+      - name: Remove commits by sre-croquis
+        run: |
+          git checkout main
+          git fetch origin
+          git rebase -i --onto $(git rev-list --reverse --all --author="leelee3264" | tail -n 1) HEAD~1
+          git push -f origin main
