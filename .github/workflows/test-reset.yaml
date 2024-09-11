@@ -24,7 +24,6 @@ jobs:
 
       - name: Remove commits by sre-croquis
         run: |
-          git checkout main
           git filter-branch --commit-filter '
             if [ "$GIT_AUTHOR_NAME" = "leelee3264" ];
             then
