@@ -11,36 +11,39 @@ on:
 
 
 jobs:
-  compress_commits:
+  squash_commits:
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
 
-    - name: Set up Git
+    - name: Configure Git
       run: |
-        git config user.name "github-actions"
-        git config user.email "actions@github.com"
+        git config --global user.name "github-actions"
+        git config --global user.email "action@github.com"
+    
+    - name: Find and squash sre-croquis commits
+      run: |
+        # Identify commits by 'sre-croquis' and create a new branch for rebase
+        TARGET_USER="leelee3264"
 
-    - name: Find sre-croquis commits
-      id: sre_commits
-      run: |
-        # sre-croquis의 커밋 해시 목록을 파일로 저장
-        git log --author="leelee3264" --reverse --pretty=format:"%h" > sre_commits.txt
-
-    - name: Rebase sre-croquis commits
-      run: |
-        # 가장 오래된 커밋 해시를 사용해 리베이스 시작
-        BASE_COMMIT=$(head -n 1 sre_commits.txt)
-        if [ -n "$BASE_COMMIT" ]; then
-          git rebase -i $BASE_COMMIT^
+        # Find all commit hashes by the user
+        commits=$(git log --pretty=format:"%h %an" | grep "$TARGET_USER" | awk '{print $1}')
+        
+        if [ -z "$commits" ]; then
+          echo "No commits by $TARGET_USER found."
+          exit 0
         fi
 
-        # 리베이스 과정에서 자동으로 squash 설정
-        sed -i 's/pick/squash/g' .git/rebase-merge/git-rebase-todo
-        git rebase --continue
+        # Start an interactive rebase starting from the first commit by sre-croquis
+        first_commit=$(echo "$commits" | tail -n 1)
 
-    - name: Push changes
+        # Rebase from the commit before the first sre-croquis commit
+        git rebase -i $first_commit^
+
+    - name: Push changes back to GitHub
       run: |
         git push origin main --force
