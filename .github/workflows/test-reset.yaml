@@ -11,7 +11,7 @@ on:
 
 
 jobs:
-  reset_history:
+  compress_commits:
     runs-on: ubuntu-latest
 
     steps:
@@ -23,15 +23,24 @@ jobs:
         git config user.name "github-actions"
         git config user.email "actions@github.com"
 
-    - name: Filter and squash sre-croquis commits
+    - name: Find sre-croquis commits
+      id: sre_commits
       run: |
-        # sre-croquis의 커밋 해시 가져오기
-        SRE_COMMITS=$(git log --author="leelee3264" --pretty=format:"%h")
-        
-        # 기본적으로 squash로 합치기
-        git reset --soft $(echo $SRE_COMMITS | tail -n 1)  # 가장 오래된 커밋 해시로 리셋
-        git commit --amend -m "Squash sre-croquis commits"
-        
+        # sre-croquis의 커밋 해시 목록을 파일로 저장
+        git log --author="leelee3264" --reverse --pretty=format:"%h" > sre_commits.txt
+
+    - name: Rebase sre-croquis commits
+      run: |
+        # 가장 오래된 커밋 해시를 사용해 리베이스 시작
+        BASE_COMMIT=$(head -n 1 sre_commits.txt)
+        if [ -n "$BASE_COMMIT" ]; then
+          git rebase -i $BASE_COMMIT^
+        fi
+
+        # 리베이스 과정에서 자동으로 squash 설정
+        sed -i 's/pick/squash/g' .git/rebase-merge/git-rebase-todo
+        git rebase --continue
+
     - name: Push changes
       run: |
-        git push origin main --force  # 강제 푸시
+        git push origin main --force
