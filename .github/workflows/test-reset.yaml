@@ -42,7 +42,7 @@ jobs:
         first_commit=$(echo "$commits" | tail -n 1)
 
         # Rebase from the commit before the first sre-croquis commit
-        git rebase -i $first_commit^
+        git rebase -i --root
 
     - name: Push changes back to GitHub
       run: |
